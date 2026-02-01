@@ -33,60 +33,57 @@ fn main() {
     let reader = std::io::BufReader::new(file);
     let mut current_word = String::new();
 
+    let mut char_bytes = Vec::new(); 
+    let mut word_start_index: Option<usize> = None;
+
     
     for byte in reader.bytes() {
-        match byte {
-            Ok(byte) => {
-                match char::from_u32(byte as u32) {
-                    Some(char) => {
-                        if char.is_whitespace() {
-                            // If btree map contains key, append index to indices list
-                            if map.contains_key(&current_word) {
-                                let mapped_word = map.get_mut(&current_word);
-                                match mapped_word {
-                                    Some(mapped_word) => {
-                                        mapped_word.push(current_char - current_word.len());
-                                        current_word.clear();
-                                    },
-                                    None => unreachable!(),
-                                }
-                            } else if !current_word.is_empty() {
-                                map.insert(current_word.clone(), vec![current_char - current_word.len()]);
-                                current_word.clear();
-                            }
-                        }
-                        // Else push the char onto the current word buffer
-                        else {
-                            current_word.push(char)
-                        }
-                    },
-                    None => {
-                        eprintln!("Failed to convert byte {} into char.", byte);
-                        return;
-                    },
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to read byte: {e}");
-                return;
-            },
+        let b = match byte {
+            Ok(b) => b,
+            Err(e) => { eprintln!("Failed to read: {}", e); return; }
         };
 
-        // Increment current byte
+        // Accumulate bytes into temporary buffer
+        char_bytes.push(b);
+
+        // Try to Convert accumulated bytes to a valid string
+        if let Ok(s) = std::str::from_utf8(&char_bytes) {
+            let char = s.chars().next().unwrap();
+            
+            // Calculate where this character started 
+            let char_start_pos = current_char - (char_bytes.len() - 1);
+
+            if char.is_whitespace() {
+                if !current_word.is_empty() {
+                    if let Some(start) = word_start_index {
+                        map.entry(current_word.clone())
+                           .or_default()
+                           .push(start);
+                    }
+                    current_word.clear();
+                    word_start_index = None;
+                }
+            } else {
+                if word_start_index.is_none() {
+                    word_start_index = Some(char_start_pos);
+                }
+                current_word.push(char);
+            }
+            
+            // Clear the byte buffer because we successfully used the character
+            char_bytes.clear();
+        } 
+        else if char_bytes.len() > 4 {
+             char_bytes.clear();
+        }
+
         current_char += 1;
     }
 
     // Handle if last word is not white space
     if !current_word.is_empty() {
-        if map.contains_key(&current_word) {
-            let mapped_word = map.get_mut(&current_word);
-            match mapped_word {
-                Some(mapped_word) => mapped_word.push(current_char - current_word.len()),
-                None => unreachable!(),
-            }
-        } else if !current_word.is_empty() {
-            map.insert(current_word.clone(), vec![current_char - current_word.len()]);
-            current_word.clear();
+        if let Some(start) = word_start_index {
+            map.entry(current_word).or_default().push(start);
         }
     }
 
@@ -98,5 +95,4 @@ fn main() {
         }
         println!();
     }
-
 }
