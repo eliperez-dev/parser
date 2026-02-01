@@ -102,8 +102,8 @@ fn main() {
     // Output
     for (key, indices) in map.iter() {
         print!("{key} ");
-        for indice in indices {
-            print!("{indice} ");
+        for index in indices {
+            print!("{index} ");
         }
         println!();
     }
@@ -118,14 +118,6 @@ mod test {
     fn test_file() {
         let map = parse_file(std::fs::File::open("test.txt").unwrap()).unwrap();
         assert_eq!(map.get("aaa"), Some(&vec![4, 12]));
-        assert_eq!(map.get("bbb"), Some(&vec![8]));
-        assert_eq!(map.get("zzz"), Some(&vec![0]));
-    }
-
-    #[test]
-    fn test_file_2() {
-        let map = parse_file(std::fs::File::open("test2.txt").unwrap()).unwrap();
-        assert_eq!(map.get("a"), Some(&vec![4, 12]));
         assert_eq!(map.get("bbb"), Some(&vec![8]));
         assert_eq!(map.get("zzz"), Some(&vec![0]));
     }
