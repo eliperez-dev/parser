@@ -1,30 +1,7 @@
 use std::{collections::BTreeMap, io::Read};
 
 
-fn main() {
-    // Read file name from program args
-    let args = std::env::args().collect::<Vec<String>>();
-    let file_name = match args.get(1) {
-        Some(file_name) => file_name,
-        None => {
-            eprintln!("Expected file name in program arguments");
-            return;
-        },
-    };
-
-    if args.len() > 2 {
-        eprintln!("Program only takes one argument: File name");
-        return;
-    }
-
-    let file = match std::fs::File::open(file_name) {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("Unable to read file {}: {}", file_name, e);
-            return;
-        },
-    };
-
+fn parse_file(file: std::fs::File) -> Result<BTreeMap<String, Vec<usize>>, String> {
     // Using btree to automatically sort lexographiclly as we insert new keys
     let mut map: BTreeMap<String, Vec<usize>>  = BTreeMap::new();
     let mut current_char = 0;
@@ -40,7 +17,7 @@ fn main() {
     for byte in reader.bytes() {
         let b = match byte {
             Ok(b) => b,
-            Err(e) => { eprintln!("Failed to read: {}", e); return; }
+            Err(e) => return Err(format!("Failed to read: {}", e))
         };
 
         // Accumulate bytes into temporary buffer
@@ -81,11 +58,46 @@ fn main() {
     }
 
     // Handle if last word is not white space
-    if !current_word.is_empty() {
-        if let Some(start) = word_start_index {
+    if !current_word.is_empty()
+        && let Some(start) = word_start_index {
             map.entry(current_word).or_default().push(start);
         }
+    
+    Ok(map)
+
+}
+
+fn main() {
+    // Read file name from program args
+    let args = std::env::args().collect::<Vec<String>>();
+    let file_name = match args.get(1) {
+        Some(file_name) => file_name,
+        None => {
+            eprintln!("Expected file name in program arguments");
+            return;
+        },
+    };
+
+    if args.len() > 2 {
+        eprintln!("Program only takes one argument: File name");
+        return;
     }
+
+    let file = match std::fs::File::open(file_name) {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("Unable to read file {}: {}", file_name, e);
+            return;
+        },
+    };
+
+    let map = match parse_file(file) {
+        Ok(map) => map,
+        Err(e) => {
+            eprintln!("{}", e);
+            return;
+        },
+    };
 
     // Output
     for (key, indices) in map.iter() {
@@ -94,5 +106,27 @@ fn main() {
             print!("{indice} ");
         }
         println!();
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use crate::parse_file;
+
+    #[test]
+    fn test_file() {
+        let map = parse_file(std::fs::File::open("test.txt").unwrap()).unwrap();
+        assert_eq!(map.get("aaa"), Some(&vec![4, 12]));
+        assert_eq!(map.get("bbb"), Some(&vec![8]));
+        assert_eq!(map.get("zzz"), Some(&vec![0]));
+    }
+
+    #[test]
+    fn test_file_2() {
+        let map = parse_file(std::fs::File::open("test2.txt").unwrap()).unwrap();
+        assert_eq!(map.get("a"), Some(&vec![4, 12]));
+        assert_eq!(map.get("bbb"), Some(&vec![8]));
+        assert_eq!(map.get("zzz"), Some(&vec![0]));
     }
 }
