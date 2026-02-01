@@ -58,11 +58,11 @@ fn parse_file<R: Read>(source: R) -> Result<BTreeMap<String, Vec<usize>>, String
     }
 
     // Handle if last word is not white space
-    if !current_word.is_empty()
-        && let Some(start) = word_start_index {
+    if !current_word.is_empty() {
+        if let Some(start) = word_start_index {
             map.entry(current_word).or_default().push(start);
         }
-    
+    }   
     Ok(map)
 
 }
