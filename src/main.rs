@@ -1,13 +1,13 @@
 use std::{collections::BTreeMap, io::Read};
 
 
-fn parse_file(file: std::fs::File) -> Result<BTreeMap<String, Vec<usize>>, String> {
+fn parse_file<R: Read>(source: R) -> Result<BTreeMap<String, Vec<usize>>, String> {
     // Using btree to automatically sort lexographiclly as we insert new keys
     let mut map: BTreeMap<String, Vec<usize>>  = BTreeMap::new();
     let mut current_char = 0;
 
     // Using buf reader to limit memory usage & use less sys calls
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::new(source);
     let mut current_word = String::new();
 
     let mut char_bytes = Vec::new(); 
@@ -120,5 +120,13 @@ mod test {
         assert_eq!(map.get("aaa"), Some(&vec![4, 12]));
         assert_eq!(map.get("bbb"), Some(&vec![8]));
         assert_eq!(map.get("zzz"), Some(&vec![0]));
+    }
+
+    #[test]
+    fn test_utf8() {
+        let data = "héllo world";
+        let map = parse_file(data.as_bytes()).unwrap();
+        assert_eq!(map.get("héllo"), Some(&vec![0]));
+        assert_eq!(map.get("world"), Some(&vec![7]));
     }
 }
